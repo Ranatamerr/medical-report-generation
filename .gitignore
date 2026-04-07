@@ -1,0 +1,5 @@
+vit_model/
+*.bin
+data/
+results/
+records_acl/
