@@ -229,8 +229,8 @@ class Trainer(BaseTrainer):
 
             images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), \
                                                  reports_masks.to(self.device)
-            output = self.model(images, reports_ids, mode='train')
-            loss = self.criterion(output, reports_ids, reports_masks)
+            output, aca_loss = self.model(images, reports_ids, mode='train')
+            loss = self.criterion(output, reports_ids, reports_masks) + aca_loss
             train_loss += loss.item()
             self.ve_optimizer.zero_grad()
             self.ed_optimizer.zero_grad()
@@ -258,8 +258,8 @@ class Trainer(BaseTrainer):
                 # ****** Compute Loss ******
                 images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), \
                                                      reports_masks.to(self.device)
-                output = self.model(images, reports_ids, mode='train')
-                loss = self.criterion(output, reports_ids, reports_masks)
+                output, aca_loss = self.model(images, reports_ids, mode='train')
+                loss = self.criterion(output, reports_ids, reports_masks) + aca_loss
                 val_loss += loss.item()
                 # ****** Compute Loss ******
 
