@@ -5,6 +5,7 @@ import torch.nn as nn
 from modules.visual_extractor import VisualExtractor
 from modules.base_cmn import BaseCMN
 from modules.har import HAR
+from modules.cmm import CMM
 
 
 class BaseCMNModel(nn.Module):
@@ -14,6 +15,7 @@ class BaseCMNModel(nn.Module):
         self.tokenizer = tokenizer
         self.visual_extractor = VisualExtractor(args)
         self.har = HAR(d_vf=args.d_vf)
+        self.cmm = CMM(d_vf=args.d_vf, d_model=args.d_model)
         self.encoder_decoder = BaseCMN(args, tokenizer)
         if args.dataset_name == 'iu_xray':
             self.forward = self.forward_iu_xray
@@ -43,6 +45,7 @@ class BaseCMNModel(nn.Module):
     def forward_mimic_cxr(self, images, targets=None, mode='train', update_opts={}):
         att_feats, fc_feats = self.visual_extractor(images)
         att_feats, aca_loss = self.har(att_feats)
+        att_feats = self.cmm(att_feats)
         if mode == 'train':
             output = self.encoder_decoder(fc_feats, att_feats, targets, mode='forward')
             return output, aca_loss
