@@ -1,6 +1,8 @@
 import torch
 import argparse
 import numpy as np
+import os
+import shutil
 from modules.tokenizers import Tokenizer
 from modules.dataloaders import R2DataLoader
 from modules.metrics import compute_scores
@@ -135,6 +137,21 @@ def main():
     # build trainer and start to train
     trainer = Trainer(model, criterion, metrics, ve_optimizer, ed_optimizer, args, train_dataloader, val_dataloader, test_dataloader)
     trainer.train()
+
+    # auto-save results to Google Drive if running on Colab
+    drive_dir = '/content/drive/MyDrive/Bachelor/results_rl'
+    if os.path.exists('/content/drive'):
+        os.makedirs(drive_dir, exist_ok=True)
+        save_dir_full = args.save_dir + '_seed_' + str(args.seed)
+        if os.path.exists(save_dir_full):
+            dest = os.path.join(drive_dir, os.path.basename(save_dir_full))
+            if os.path.exists(dest):
+                shutil.rmtree(dest)
+            shutil.copytree(save_dir_full, dest)
+        if os.path.exists(args.record_dir):
+            for f in os.listdir(args.record_dir):
+                shutil.copy(os.path.join(args.record_dir, f), drive_dir)
+        print('Results saved to Google Drive: {}'.format(drive_dir))
 
 
 if __name__ == '__main__':

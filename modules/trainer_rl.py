@@ -276,10 +276,10 @@ class Trainer(BaseTrainer):
 
             images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), \
                                                  reports_masks.to(self.device)
-            output = self.model(images, reports_ids, mode='train')
+            output, aca_loss = self.model(images, reports_ids, mode='train')
             loss_nll = compute_loss(output, reports_ids, reports_masks)
 
-            loss = 0.01 * loss_nll + 0.99 * loss_rl
+            loss = 0.01 * (loss_nll + aca_loss) + 0.99 * loss_rl
 
             # ********* Self-Critical *********
 
