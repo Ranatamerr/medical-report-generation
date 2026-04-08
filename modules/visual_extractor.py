@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from transformers import ViTModel
@@ -9,7 +10,8 @@ class VisualExtractor(nn.Module):
 
         # Load pretrained ViT
         # This downloads ~330MB the first time, then caches it
-        self.vit = ViTModel.from_pretrained('vit_model')
+        vit_path = os.path.join(os.path.dirname(__file__), '..', 'vit_model')
+        self.vit = ViTModel.from_pretrained(vit_path)
 
         # ViT outputs 768-dim features
         # Your decoder expects 2048-dim features
