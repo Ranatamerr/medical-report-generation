@@ -89,6 +89,7 @@ def parse_agrs():
     # Others
     parser.add_argument('--seed', type=int, default=9233, help='.')
     parser.add_argument('--resume', type=str, help='whether to resume the training from existing checkpoints.')
+    parser.add_argument('--max_steps', type=int, default=None, help='limit batches per epoch (for quick testing).')
 
     args = parser.parse_args()
     return args

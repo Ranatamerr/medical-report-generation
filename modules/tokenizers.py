@@ -18,11 +18,12 @@ class Tokenizer(object):
         self.save_to_file(self.token2idx, self.idx2token)
 
     def save_to_file(self, token2idx, idx2token):
-        with open(os.path.join('data', self.dataset_name, 'token2idx.json'), 'w') as f:
+        data_dir = os.path.dirname(self.ann_path)
+        with open(os.path.join(data_dir, 'token2idx.json'), 'w') as f:
             json_str = json.dumps(token2idx)
             f.write(json_str)
 
-        with open(os.path.join('data', self.dataset_name, 'idx2token.json'), 'w') as f:
+        with open(os.path.join(data_dir, 'idx2token.json'), 'w') as f:
             json_str = json.dumps(idx2token)
             f.write(json_str)
 
