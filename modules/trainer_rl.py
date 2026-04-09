@@ -203,6 +203,19 @@ class BaseTrainer(object):
             torch.save(state, best_path)
             self.logger.info("Saving current best: model_best.pth ...")
 
+    def _save_midepoch_checkpoint(self, epoch, step):
+        state = {
+            'epoch': epoch - 1,  # epoch-1 so resuming re-runs this epoch from scratch if needed
+            'step': step,
+            'state_dict': self.model.state_dict(),
+            've_optimizer': self.ve_optimizer.state_dict(),
+            'ed_optimizer': self.ed_optimizer.state_dict(),
+            'monitor_best': self.mnt_best
+        }
+        filename = os.path.join(self.checkpoint_dir, 'midepoch_checkpoint.pth')
+        torch.save(state, filename)
+        self.logger.info("Saved mid-epoch checkpoint at step {}.".format(step))
+
     def _resume_checkpoint(self, resume_path):
         resume_path = str(resume_path)
         self.logger.info("Loading checkpoint: {} ...".format(resume_path))
@@ -295,6 +308,10 @@ class Trainer(BaseTrainer):
                                  .format(epoch, self.epochs, batch_idx, len(self.train_dataloader),
                                          train_loss / (batch_idx + 1), lrs['lr_visual_extractor'],
                                          lrs['lr_encoder_decoder']))
+
+            # Save mid-epoch checkpoint every 100 steps
+            if (batch_idx + 1) % 100 == 0:
+                self._save_midepoch_checkpoint(epoch, batch_idx + 1)
 
             if (batch_idx+1) % self.args.sc_eval_period == 0:
                 log = {'train_loss': train_loss / (batch_idx + 1)}
