@@ -16,6 +16,10 @@ class BaseDataset(Dataset):
         self.ann = json.loads(open(self.ann_path, 'r').read())
         # self.label_set = self.ann['label_set']
         self.examples = self.ann[self.split]
+        if self.split == 'train':
+            max_samples = getattr(args, 'max_train_samples', None)
+            if max_samples is not None and max_samples < len(self.examples):
+                self.examples = self.examples[:max_samples]
         for i in range(len(self.examples)):
             self.examples[i]['ids'] = tokenizer(self.examples[i]['report'])[:self.max_seq_length]
             self.examples[i]['mask'] = [1] * len(self.examples[i]['ids'])
