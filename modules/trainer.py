@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import shutil
 import time
 from abc import abstractmethod
 
@@ -133,6 +134,12 @@ class BaseTrainer(object):
         #record_table = record_table.append(tmp_log, ignore_index=True)
         record_table = pd.concat([record_table, pd.DataFrame([tmp_log])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
+
+        # backup to Google Drive after every epoch if running on Colab
+        drive_record_dir = '/content/drive/MyDrive/Bachelor/results'
+        if os.path.exists('/content/drive'):
+            os.makedirs(drive_record_dir, exist_ok=True)
+            shutil.copy(record_path, os.path.join(drive_record_dir, os.path.basename(record_path)))
 
     def _print_best(self):
         self.logger.info('Best results (w.r.t {}) in validation set:'.format(self.args.monitor_metric))
