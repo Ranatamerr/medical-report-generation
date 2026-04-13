@@ -188,6 +188,15 @@ class BaseTrainer(object):
             torch.save(state, best_path)
             self.logger.info("Saving current best: model_best.pth ...")
 
+        # backup checkpoints to Google Drive if running on Colab
+        drive_ckpt_dir = '/content/drive/MyDrive/Bachelor/results/' + os.path.basename(self.checkpoint_dir)
+        if os.path.exists('/content/drive'):
+            os.makedirs(drive_ckpt_dir, exist_ok=True)
+            shutil.copy(filename, os.path.join(drive_ckpt_dir, 'current_checkpoint.pth'))
+            if save_best:
+                shutil.copy(best_path, os.path.join(drive_ckpt_dir, 'model_best.pth'))
+            self.logger.info("Checkpoint backed up to Google Drive.")
+
     def _resume_checkpoint(self, resume_path):
         resume_path = str(resume_path)
         self.logger.info("Loading checkpoint: {} ...".format(resume_path))

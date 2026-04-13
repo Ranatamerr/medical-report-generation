@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import shutil
 import time
 from abc import abstractmethod
 
@@ -153,8 +154,14 @@ class BaseTrainer(object):
             record_table = pd.read_csv(record_path)
         tmp_log = copy.deepcopy(log)
         tmp_log.update(**self.args.__dict__)
-        record_table = record_table.append(tmp_log, ignore_index=True)
+        record_table = pd.concat([record_table, pd.DataFrame([tmp_log])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
+
+        # backup to Google Drive after every epoch if running on Colab
+        drive_record_dir = '/content/drive/MyDrive/Bachelor/results'
+        if os.path.exists('/content/drive'):
+            os.makedirs(drive_record_dir, exist_ok=True)
+            shutil.copy(record_path, os.path.join(drive_record_dir, os.path.basename(record_path)))
 
     def _print_best(self):
         self.logger.info('Best results (w.r.t {}) in validation set:'.format(self.args.monitor_metric))
@@ -167,8 +174,8 @@ class BaseTrainer(object):
 
     def _get_learning_rate(self):
         lrs = list()
-        lrs.append(self.ve_optimizer.current_lr)
-        lrs.append(self.ed_optimizer.current_lr)
+        lrs.append(self.ve_optimizer.state_dict()['param_groups'][0]['lr'])
+        lrs.append(self.ed_optimizer.state_dict()['param_groups'][0]['lr'])
 
         return {'lr_visual_extractor': lrs[0], 'lr_encoder_decoder': lrs[1]}
 
