@@ -130,8 +130,15 @@ class BaseTrainer(object):
         else:
             record_table = pd.read_csv(record_path)
         tmp_log = copy.deepcopy(log)
-        tmp_log.update(**self.args.__dict__)
-        #record_table = record_table.append(tmp_log, ignore_index=True)
+        tmp_log['time'] = crt_time
+        tmp_log['seed'] = self.args.seed
+        keep_cols = [
+            'epoch', 'train_loss', 'val_loss',
+            'val_BLEU_1', 'val_BLEU_2', 'val_BLEU_3', 'val_BLEU_4', 'val_ROUGE_L',
+            'test_BLEU_1', 'test_BLEU_2', 'test_BLEU_3', 'test_BLEU_4', 'test_ROUGE_L',
+            'lr_visual_extractor', 'lr_encoder_decoder', 'time', 'seed'
+        ]
+        tmp_log = {k: tmp_log[k] for k in keep_cols if k in tmp_log}
         record_table = pd.concat([record_table, pd.DataFrame([tmp_log])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
 
