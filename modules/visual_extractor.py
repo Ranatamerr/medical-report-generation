@@ -1,40 +1,39 @@
-import os
 import torch
 import torch.nn as nn
-from transformers import ViTModel
+import torchvision.models as models
 
 
 class VisualExtractor(nn.Module):
     def __init__(self, args):
         super(VisualExtractor, self).__init__()
 
-        # Load pretrained ViT
-        # This downloads ~330MB the first time, then caches it
-        vit_path = os.path.join(os.path.dirname(__file__), '..', 'vit_model')
-        self.vit = ViTModel.from_pretrained(vit_path)
+        # Original R2Gen ResNet-101 visual extractor
+        resnet = models.resnet101(pretrained=True)
 
-        # ViT outputs 768-dim features
-        # Your decoder expects 2048-dim features
-        # This small layer bridges them
-        self.project = nn.Linear(768, args.d_vf)
+        # Remove final FC and avgpool layers — keep feature extractor only
+        modules = list(resnet.children())[:-2]
+        self.resnet = nn.Sequential(*modules)
+
+        # Global average pooling for fc_feats
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Project to d_vf (2048 → 2048, identity by default)
+        self.projection = nn.Linear(2048, args.d_vf)
+        self.dropout = nn.Dropout(args.dropout)
 
     def forward(self, images):
-        # images shape: [batch, 3, 224, 224]
+        # images: [batch, 3, 224, 224]
 
-        # Run ViT — outputs one vector per patch
-        outputs = self.vit(pixel_values=images)
+        # Extract feature map: [batch, 2048, 7, 7]
+        feat_map = self.resnet(images)
 
-        # last_hidden_state shape: [batch, 197, 768]
-        # 197 = 1 CLS token + 196 patch tokens
-        all_tokens = outputs.last_hidden_state
+        # Global average pool: [batch, 2048]
+        avg_feats = self.avg_pool(feat_map).squeeze(-1).squeeze(-1)
+        fc_feats = self.dropout(self.projection(avg_feats))
 
-        # Split CLS token (global summary) from patch tokens (local regions)
-        cls_token    = all_tokens[:, 0, :]      # [batch, 768]
-        patch_tokens = all_tokens[:, 1:, :]     # [batch, 196, 768]
+        # Flatten spatial: [batch, 49, 2048]
+        batch_size, C, H, W = feat_map.shape
+        att_feats = feat_map.permute(0, 2, 3, 1).reshape(batch_size, H * W, C)
+        att_feats = self.dropout(self.projection(att_feats))
 
-        # Project both from 768 → 2048
-        patch_feats = self.project(patch_tokens) # [batch, 196, 2048]
-        avg_feats   = self.project(cls_token)    # [batch, 2048]
-
-        # Return same variable names the decoder expects
-        return patch_feats, avg_feats
+        return att_feats, fc_feats
