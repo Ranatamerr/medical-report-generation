@@ -44,8 +44,9 @@ class BaseCMNModel(nn.Module):
 
     def forward_mimic_cxr(self, images, targets=None, mode='train', update_opts={}):
         att_feats, fc_feats = self.visual_extractor(images)
-        att_feats, aca_loss = self.har(att_feats)
-        att_feats = self.cmm(att_feats)
+        region_feats, aca_loss = self.har(att_feats)
+        region_feats = self.cmm(region_feats)
+        att_feats = torch.cat([region_feats, att_feats], dim=1)
         if mode == 'train':
             output = self.encoder_decoder(fc_feats, att_feats, targets, mode='forward')
             return output, aca_loss
