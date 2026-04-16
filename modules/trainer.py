@@ -187,21 +187,34 @@ class BaseTrainer(object):
             'ed_optimizer': self.ed_optimizer.state_dict(),
             'monitor_best': self.mnt_best
         }
-        filename = os.path.join(self.checkpoint_dir, 'current_checkpoint.pth')
-        torch.save(state, filename)
-        self.logger.info("Saving checkpoint: {} ...".format(filename))
+
+        # Save locally first
+        local_filename = os.path.join(self.checkpoint_dir, 'current_checkpoint.pth')
+        tmp_filename = local_filename + '.tmp'
+        torch.save(state, tmp_filename)
+        os.replace(tmp_filename, local_filename)
+        self.logger.info("Saving checkpoint: {} ...".format(local_filename))
+
         if save_best:
-            best_path = os.path.join(self.checkpoint_dir, 'model_best.pth')
-            torch.save(state, best_path)
+            local_best = os.path.join(self.checkpoint_dir, 'model_best.pth')
+            tmp_best = local_best + '.tmp'
+            torch.save(state, tmp_best)
+            os.replace(tmp_best, local_best)
             self.logger.info("Saving current best: model_best.pth ...")
 
-        # backup checkpoints to Google Drive if running on Colab
+        # Backup to Google Drive using tmp-then-replace to avoid corruption
         drive_ckpt_dir = '/content/drive/MyDrive/Bachelor/results/' + os.path.basename(self.checkpoint_dir)
         if os.path.exists('/content/drive'):
             os.makedirs(drive_ckpt_dir, exist_ok=True)
-            shutil.copy(filename, os.path.join(drive_ckpt_dir, 'current_checkpoint.pth'))
+            drive_filename = os.path.join(drive_ckpt_dir, 'current_checkpoint.pth')
+            drive_tmp = drive_filename + '.tmp'
+            shutil.copy(local_filename, drive_tmp)
+            os.replace(drive_tmp, drive_filename)
             if save_best:
-                shutil.copy(best_path, os.path.join(drive_ckpt_dir, 'model_best.pth'))
+                drive_best = os.path.join(drive_ckpt_dir, 'model_best.pth')
+                drive_best_tmp = drive_best + '.tmp'
+                shutil.copy(local_best, drive_best_tmp)
+                os.replace(drive_best_tmp, drive_best)
             self.logger.info("Checkpoint backed up to Google Drive.")
 
     def _resume_checkpoint(self, resume_path):
