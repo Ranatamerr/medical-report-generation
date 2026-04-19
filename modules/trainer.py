@@ -299,7 +299,7 @@ class Trainer(BaseTrainer):
                 val_loss += loss.item()
                 # ****** Compute Loss ******
 
-                output, _ = self.model(images, mode='sample')
+                output, _ = self.model(images, mode='sample', update_opts={'sample_method': 'beam_search', 'beam_size': 3})
                 reports = self.model.tokenizer.decode_batch(output.cpu().numpy())
                 ground_truths = self.model.tokenizer.decode_batch(reports_ids[:, 1:].cpu().numpy())
                 val_res.extend(reports)
@@ -322,7 +322,7 @@ class Trainer(BaseTrainer):
             for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.test_dataloader):
                 images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(
                     self.device), reports_masks.to(self.device)
-                output, _ = self.model(images, mode='sample')
+                output, _ = self.model(images, mode='sample', update_opts={'sample_method': 'beam_search', 'beam_size': 3})
                 reports = self.model.tokenizer.decode_batch(output.cpu().numpy())
                 ground_truths = self.model.tokenizer.decode_batch(reports_ids[:, 1:].cpu().numpy())
                 test_res.extend(reports)
