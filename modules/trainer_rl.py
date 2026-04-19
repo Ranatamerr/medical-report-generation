@@ -174,8 +174,8 @@ class BaseTrainer(object):
 
     def _get_learning_rate(self):
         lrs = list()
-        lrs.append(self.ve_optimizer.state_dict()['param_groups'][0]['lr'])
-        lrs.append(self.ed_optimizer.state_dict()['param_groups'][0]['lr'])
+        lrs.append(self.ve_optimizer.optimizer.state_dict()['param_groups'][0]['lr'])
+        lrs.append(self.ed_optimizer.optimizer.state_dict()['param_groups'][0]['lr'])
 
         return {'lr_visual_extractor': lrs[0], 'lr_encoder_decoder': lrs[1]}
 
