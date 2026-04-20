@@ -270,6 +270,7 @@ class Trainer(BaseTrainer):
         self.logger.info('[{}/{}] Start to train in the training set.'.format(epoch, self.epochs))
         train_loss = 0
         self.model.train()
+        self.model.visual_extractor.requires_grad_(False)
         for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.train_dataloader):
 
             images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), \
