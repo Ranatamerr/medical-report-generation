@@ -153,7 +153,16 @@ class BaseTrainer(object):
         else:
             record_table = pd.read_csv(record_path)
         tmp_log = copy.deepcopy(log)
-        tmp_log.update(**self.args.__dict__)
+        tmp_log['time'] = crt_time
+        tmp_log['seed'] = self.args.seed
+        keep_cols = [
+            'epoch', 'train_loss',
+            'train_BLEU_1', 'train_BLEU_2', 'train_BLEU_3', 'train_BLEU_4', 'train_ROUGE_L',
+            'val_loss', 'val_BLEU_1', 'val_BLEU_2', 'val_BLEU_3', 'val_BLEU_4', 'val_ROUGE_L',
+            'test_BLEU_1', 'test_BLEU_2', 'test_BLEU_3', 'test_BLEU_4', 'test_ROUGE_L',
+            'lr_visual_extractor', 'lr_encoder_decoder', 'time', 'seed'
+        ]
+        tmp_log = {k: tmp_log[k] for k in keep_cols if k in tmp_log}
         record_table = pd.concat([record_table, pd.DataFrame([tmp_log])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
 
@@ -382,6 +391,22 @@ class Trainer(BaseTrainer):
                 self._write_to_file(test_gts, test_res, epoch, batch_idx)
 
         log = {'train_loss': train_loss / len(self.train_dataloader)}
+
+        self.logger.info('[{}/{}] Start to evaluate in the training set.'.format(epoch, self.epochs))
+        self.model.eval()
+        with torch.no_grad():
+            train_gts, train_res = [], []
+            for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.train_dataloader):
+                images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(
+                    self.device), reports_masks.to(self.device)
+                output, _ = self.model(images, mode='sample')
+                reports = self.model.tokenizer.decode_batch(output.cpu().numpy())
+                ground_truths = self.model.tokenizer.decode_batch(reports_ids[:, 1:].cpu().numpy())
+                train_res.extend(reports)
+                train_gts.extend(ground_truths)
+            train_met = self.metric_ftns({i: [gt] for i, gt in enumerate(train_gts)},
+                                         {i: [re] for i, re in enumerate(train_res)})
+            log.update(**{'train_' + k: v for k, v in train_met.items()})
 
         self.logger.info('[{}/{}] Start to evaluate in the validation set.'.format(epoch, self.epochs))
         self.model.eval()
