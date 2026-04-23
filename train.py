@@ -8,7 +8,7 @@ from modules.dataloaders import R2DataLoader
 from modules.metrics import compute_scores
 from modules.optimizers import build_optimizer, build_lr_scheduler, build_noamopt_optimizer
 from modules.trainer import Trainer
-from modules.loss import compute_loss
+from modules.loss import compute_loss, CriterionWrapper
 from models.models import BaseCMNModel
 
 
@@ -87,6 +87,11 @@ def parse_agrs():
     parser.add_argument('--step_size', type=int, default=50, help='the step size of the learning rate scheduler.')
     parser.add_argument('--gamma', type=float, default=0.1, help='the gamma of the learning rate scheduler.')
 
+    # Training improvements
+    parser.add_argument('--label_smoothing', type=float, default=0.1, help='label smoothing factor for CE loss.')
+    parser.add_argument('--aca_loss_weight', type=float, default=0.1, help='weight for ACA contrastive loss.')
+    parser.add_argument('--vit_freeze_epochs', type=int, default=0, help='freeze ViT for this many epochs at start.')
+
     # Others
     parser.add_argument('--seed', type=int, default=9233, help='.')
     parser.add_argument('--resume', type=str, help='whether to resume the training from existing checkpoints.')
@@ -118,7 +123,7 @@ def main():
     model = BaseCMNModel(args, tokenizer)
 
     # get function handles of loss and metrics
-    criterion = compute_loss
+    criterion = CriterionWrapper(label_smoothing=args.label_smoothing)
     metrics = compute_scores
 
     # build optimizer, learning rate scheduler

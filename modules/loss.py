@@ -3,16 +3,31 @@ import torch.nn as nn
 
 
 class LanguageModelCriterion(nn.Module):
-    def __init__(self):
+    def __init__(self, label_smoothing=0.0):
         super(LanguageModelCriterion, self).__init__()
+        self.label_smoothing = label_smoothing
 
     def forward(self, input, target, mask):
         # truncate to the same size
         target = target[:, :input.size(1)]
         mask = mask[:, :input.size(1)]
-        output = -input.gather(2, target.long().unsqueeze(2)).squeeze(2) * mask
-        output = torch.sum(output) / torch.sum(mask)
-        return output
+        nll = -input.gather(2, target.long().unsqueeze(2)).squeeze(2)
+        if self.label_smoothing > 0:
+            smooth = -input.mean(dim=2)
+            output = ((1 - self.label_smoothing) * nll + self.label_smoothing * smooth) * mask
+        else:
+            output = nll * mask
+        return torch.sum(output) / torch.sum(mask)
+
+
+class CriterionWrapper(nn.Module):
+    """Wraps LanguageModelCriterion to handle reports_ids/masks slicing."""
+    def __init__(self, label_smoothing=0.0):
+        super(CriterionWrapper, self).__init__()
+        self.criterion = LanguageModelCriterion(label_smoothing=label_smoothing)
+
+    def forward(self, output, reports_ids, reports_masks):
+        return self.criterion(output, reports_ids[:, 1:], reports_masks[:, 1:])
 
 
 class LossWrapper(nn.Module):

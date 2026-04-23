@@ -257,6 +257,16 @@ class Trainer(BaseTrainer):
 
         self.logger.info('[{}/{}] Start to train in the training set.'.format(epoch, self.epochs))
         train_loss = 0
+
+        vit_freeze_epochs = getattr(self.args, 'vit_freeze_epochs', 0)
+        if vit_freeze_epochs > 0:
+            if epoch <= vit_freeze_epochs:
+                self.model.visual_extractor.requires_grad_(False)
+                self.logger.info('[{}/{}] ViT frozen.'.format(epoch, self.epochs))
+            elif epoch == vit_freeze_epochs + 1:
+                self.model.visual_extractor.requires_grad_(True)
+                self.logger.info('[{}/{}] ViT unfrozen.'.format(epoch, self.epochs))
+
         self.model.train()
         for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.train_dataloader):
 
@@ -267,7 +277,8 @@ class Trainer(BaseTrainer):
             images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), \
                                                  reports_masks.to(self.device)
             output, aca_loss = self.model(images, reports_ids, mode='train')
-            loss = self.criterion(output, reports_ids, reports_masks) + aca_loss
+            aca_weight = getattr(self.args, 'aca_loss_weight', 1.0)
+            loss = self.criterion(output, reports_ids, reports_masks) + aca_weight * aca_loss
             train_loss += loss.item()
             self.ve_optimizer.zero_grad()
             self.ed_optimizer.zero_grad()
