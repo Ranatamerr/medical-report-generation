@@ -323,7 +323,8 @@ class Trainer(BaseTrainer):
                 images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), \
                                                      reports_masks.to(self.device)
                 output, aca_loss = self.model(images, reports_ids, mode='train')
-                loss = self.criterion(output, reports_ids, reports_masks) + aca_loss
+                aca_weight = getattr(self.args, 'aca_loss_weight', 1.0)
+                loss = self.criterion(output, reports_ids, reports_masks) + aca_weight * aca_loss
                 val_loss += loss.item()
                 # ****** Compute Loss ******
 

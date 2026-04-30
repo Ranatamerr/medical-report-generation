@@ -91,46 +91,46 @@ class HARLayer(nn.Module):
 class ACALoss(nn.Module):
     """
     Anatomical Consistency Alignment loss.
-    Uses contrastive learning to:
-    - Pull same regions together across patients (heart_A ~ heart_B)
-    - Push different regions apart (heart != lung)
+    For each patient, pushes different anatomical region features apart
+    so each region learns a distinct representation.
+    Uses cross-region contrastive loss within each patient.
     """
 
-    def __init__(self, temperature=0.07):
+    def __init__(self, temperature=0.5):
         super(ACALoss, self).__init__()
         self.temperature = temperature
 
     def forward(self, region_features):
         """
         region_features: [batch, num_regions, d_vf]
-        
-        For each region type, features from different patients 
-        should be similar. Features from different regions 
-        should be different.
+
+        For each patient, the num_regions features should be
+        mutually dissimilar (heart != lung != mediastinum etc.).
+        We treat each region as the anchor and all other regions
+        as negatives — there is no positive pair (other than self).
+        This is equivalent to maximizing inter-region distance.
         """
-        batch_size, num_regions, d_vf = region_features.shape
+        batch_size, num_regions, _ = region_features.shape
 
-        # Normalize features
-        region_features = F.normalize(region_features, dim=-1)
+        # Normalize features along feature dimension
+        region_features = F.normalize(region_features, dim=-1)  # [batch, num_regions, d_vf]
 
-        loss = 0.0
-        count = 0
+        # Compute pairwise similarity between all regions within each patient
+        # sim[b, i, j] = cosine similarity between region i and region j for patient b
+        sim_matrix = torch.bmm(region_features, region_features.transpose(1, 2))  # [batch, num_regions, num_regions]
+        sim_matrix = sim_matrix / self.temperature
 
-        for r in range(num_regions):
-            # Features for region r across all patients: [batch, d_vf]
-            region_r = region_features[:, r, :]
+        # For each region i, treat itself as the positive and all others as negatives
+        # Labels: each region i is its own positive (diagonal)
+        labels = torch.arange(num_regions).to(region_features.device)  # [num_regions]
+        labels = labels.unsqueeze(0).expand(batch_size, -1)             # [batch, num_regions]
 
-            # Similarity matrix: [batch, batch]
-            sim_matrix = torch.matmul(region_r, region_r.T) / self.temperature
+        # Reshape for cross_entropy: [batch * num_regions, num_regions]
+        sim_flat = sim_matrix.view(batch_size * num_regions, num_regions)
+        labels_flat = labels.reshape(batch_size * num_regions)
 
-            # Positive pairs: same region, different patients (diagonal excluded)
-            # Negative pairs: different regions, same or different patients
-            labels = torch.arange(batch_size).to(region_features.device)
-
-            loss += F.cross_entropy(sim_matrix, labels)
-            count += 1
-
-        return loss / count
+        loss = F.cross_entropy(sim_flat, labels_flat)
+        return loss
 
 
 class HAR(nn.Module):
