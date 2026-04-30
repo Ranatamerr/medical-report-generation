@@ -283,6 +283,7 @@ class Trainer(BaseTrainer):
             self.ve_optimizer.zero_grad()
             self.ed_optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             self.ve_optimizer.step()
             self.ed_optimizer.step()
             if batch_idx % self.args.log_period == 0:

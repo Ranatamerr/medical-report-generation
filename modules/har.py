@@ -143,7 +143,7 @@ class HAR(nn.Module):
     Also computes ACA loss for training.
     """
 
-    def __init__(self, d_vf, num_layers=4, num_heads=8, dropout=0.1):
+    def __init__(self, d_vf, num_layers=2, num_heads=8, dropout=0.1):
         super(HAR, self).__init__()
 
         self.num_regions = NUM_REGIONS
