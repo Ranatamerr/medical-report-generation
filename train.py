@@ -89,7 +89,7 @@ def parse_agrs():
 
     # Training improvements
     parser.add_argument('--label_smoothing', type=float, default=0.1, help='label smoothing factor for CE loss.')
-    parser.add_argument('--aca_loss_weight', type=float, default=0.1, help='weight for ACA contrastive loss.')
+    parser.add_argument('--aca_loss_weight', type=float, default=0.01, help='weight for ACA contrastive loss.')
     parser.add_argument('--vit_freeze_epochs', type=int, default=0, help='freeze ViT for this many epochs at start.')
 
     # Others
