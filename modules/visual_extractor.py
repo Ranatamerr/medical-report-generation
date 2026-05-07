@@ -1,17 +1,17 @@
 import torch
 import torch.nn as nn
-from open_clip import create_model_from_pretrained
+import timm
 
 
 class VisualExtractor(nn.Module):
     def __init__(self, args):
         super(VisualExtractor, self).__init__()
 
-        # Load BiomedCLIP vision encoder (medically pretrained on 15M biomedical image-text pairs)
-        # Paper: https://arxiv.org/abs/2303.00915
-        # First run downloads ~1GB and caches in ~/.cache/huggingface/
-        model, _ = create_model_from_pretrained('hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224')
-        self.vit = model.visual.trunk  # timm ViT backbone, same patch geometry as google/vit-base-patch16-224
+        # Load BiomedCLIP ViT backbone from locally saved weights
+        # Weights saved to Drive via: torch.save(model.visual.trunk.state_dict(), '...biomedclip_vit.pth')
+        self.vit = timm.create_model('vit_base_patch16_224', pretrained=False, num_classes=0)
+        weights_path = '/content/drive/MyDrive/Bachelor/biomedclip_vit.pth'
+        self.vit.load_state_dict(torch.load(weights_path, map_location='cpu'))
 
         # BiomedCLIP ViT outputs 768-dim features; decoder expects 2048-dim
         # Separate projections: patches are local, CLS is global summary
